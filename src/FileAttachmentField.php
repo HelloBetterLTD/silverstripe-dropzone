@@ -24,6 +24,7 @@ use SilverStripe\ORM\SS_List;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\RelationList;
 use SilverStripe\ORM\UnsavedRelationList;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
  * Defines the FileAttachementField form field type
@@ -131,8 +132,8 @@ class FileAttachmentField extends FileField
     {
         return preg_replace_callback(
             '/_([a-z])/', function ($c) {
-                return strtoupper($c[1]);
-            }, $str
+            return strtoupper($c[1]);
+        }, $str
         );
     }
 
@@ -148,8 +149,8 @@ class FileAttachmentField extends FileField
 
         return preg_replace_callback(
             '/([A-Z])/', function ($c) {
-                return "_" . strtolower($c[1]);
-            }, $str
+            return "_" . strtolower($c[1]);
+        }, $str
         );
     }
 
@@ -161,14 +162,15 @@ class FileAttachmentField extends FileField
      */
     public static function get_filesize_from_ini()
     {
-        $bytes = min(
-            array(
-            File::ini2bytes(ini_get('post_max_size') ?: '8M'),
-            File::ini2bytes(ini_get('upload_max_filesize') ?: '2M')
-            )
-        );
+//        $bytes = min(
+//            array(
+//            File::ini2bytes(ini_get('post_max_size') ?: '8M'),
+//            File::ini2bytes(ini_get('upload_max_filesize') ?: '2M')
+//            )
+//        );
 
-        return floor($bytes/(1024*1024));
+//        return floor($bytes/(1024*1024));
+        return UploadedFile::getMaxFilesize();;
     }
 
     /**
@@ -552,7 +554,7 @@ class FileAttachmentField extends FileField
             if ($data->getSchema()->hasOneComponent(get_class($data), $fieldName)) {
                 $id = $data->{$fieldName.'ID'};
                 if ($id) {
-                    $ids[] = $id; 
+                    $ids[] = $id;
                 }
             } else if ($data->getSchema()->hasManyComponent(get_class($data), $fieldName) || $data->getSchema()->manyManyComponent(get_class($data), $fieldName)) {
                 $files = $data->{$fieldName}();
@@ -561,7 +563,7 @@ class FileAttachmentField extends FileField
                         if (!$file->exists()) {
                             continue;
                         }
-                        $ids[] = $file->ID; 
+                        $ids[] = $file->ID;
                     }
                 }
             }
@@ -831,7 +833,7 @@ class FileAttachmentField extends FileField
     {
         return $this->setPermissions(
             array(
-            $perm => $val
+                $perm => $val
             )
         );
     }
@@ -862,7 +864,7 @@ class FileAttachmentField extends FileField
     {
         return Controller::curr() instanceof LeftAndMain;
     }
-    
+
     /**
      * @note   these are user-friendlier versions of internal PHP errors reported back in the ['error'] value of an upload
      * @return string
@@ -871,29 +873,29 @@ class FileAttachmentField extends FileField
     {
         $error_message = "";
         switch($code) {
-        case UPLOAD_ERR_OK:
-            // no error - 0
-            return "";
-          break;
-        case UPLOAD_ERR_INI_SIZE:
-        case UPLOAD_ERR_FORM_SIZE:
-            $error_message = _t('FileAttachmentField.ERRFILESIZE', 'The file is too large, please try again with a smaller version of the file.');
-            break;
-        case UPLOAD_ERR_PARTIAL:
-            $error_message = _t('FileAttachmentField.ERRPARTIALUPLOAD', 'The file was only partially uploaded, did you cancel the upload? Please try again.');
-            break;
-        case UPLOAD_ERR_NO_FILE:
-            $error_message = _t('FileAttachmentField.ERRNOFILE', 'No file upload was detected.');
-            break;
-        case UPLOAD_ERR_NO_TMP_DIR:
-        case UPLOAD_ERR_CANT_WRITE:
-        case UPLOAD_ERR_EXTENSION:
-            $error_message = _t('FileAttachmentField.ERRSYSTEMFAIL', 'Sorry, the system is not allowing file uploads at this time.');
-            break;
-        default:
-            // handles if an extra error value is added at some point as a general error
-            $error_message = _t('FileAttachmentField.ERRUNKNOWNCODE', 'Sorry, an unknown error has occured. Please try again later.');
-            break;
+            case UPLOAD_ERR_OK:
+                // no error - 0
+                return "";
+                break;
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                $error_message = _t('FileAttachmentField.ERRFILESIZE', 'The file is too large, please try again with a smaller version of the file.');
+                break;
+            case UPLOAD_ERR_PARTIAL:
+                $error_message = _t('FileAttachmentField.ERRPARTIALUPLOAD', 'The file was only partially uploaded, did you cancel the upload? Please try again.');
+                break;
+            case UPLOAD_ERR_NO_FILE:
+                $error_message = _t('FileAttachmentField.ERRNOFILE', 'No file upload was detected.');
+                break;
+            case UPLOAD_ERR_NO_TMP_DIR:
+            case UPLOAD_ERR_CANT_WRITE:
+            case UPLOAD_ERR_EXTENSION:
+                $error_message = _t('FileAttachmentField.ERRSYSTEMFAIL', 'Sorry, the system is not allowing file uploads at this time.');
+                break;
+            default:
+                // handles if an extra error value is added at some point as a general error
+                $error_message = _t('FileAttachmentField.ERRUNKNOWNCODE', 'Sorry, an unknown error has occured. Please try again later.');
+                break;
         }
         return $error_message;
     }
@@ -914,7 +916,7 @@ class FileAttachmentField extends FileField
      */
     public function upload(HTTPRequest $request)
     {
-      
+
         $name = $this->getSetting('paramName');
         $files = (!empty($_FILES[$name]) ? $_FILES[$name] : array());
         $tmpFiles = array();
@@ -924,14 +926,14 @@ class FileAttachmentField extends FileField
             $error_message = _t('FileAttachmentField.UPLOADFORBIDDEN', 'Files cannot be uploaded via this form at the current time.');
             return $this->httpError(403, $error_message);
         }
-        
+
         // No files detected in the upload, this can occur if post_max_size is < the upload size
         $value = $request->postVar($name);
         if(empty($files) || empty($value)) {
             $error_message = _t('FileAttachmentField.NOFILESUPLOADED', 'No files were detected in your upload. Please try again later.');
             return $this->httpError(400, $error_message);
         }
-        
+
         // Security token check, must go after above check as a low post_max_size can scrub the Security Token name from the request
         $form = $this->getForm();
         if($form) {
@@ -1312,8 +1314,8 @@ class FileAttachmentField extends FileField
         }
 
         if($filename) {
-            if($defaultClass == "Image" 
-                && $this->config()->upgrade_images 
+            if($defaultClass == "Image"
+                && $this->config()->upgrade_images
                 && !Injector::inst()->get($class) instanceof Image
             ) {
                 $class = Image::class;
@@ -1411,7 +1413,7 @@ class FileAttachmentField extends FileField
             throw new Exception("FileAttachmentField::getDefaults() - There is no config json file at $file_path");
         }
 
-        return Convert::json2array(file_get_contents($file_path));
+        return json_decode(file_get_contents($file_path), true);
     }
 
     /**
@@ -1486,7 +1488,7 @@ class FileAttachmentField extends FileField
             }
         }
 
-        return Convert::array2json($data);
+        return json_encode($data, true);
     }
 
     public function performReadonlyTransformation()
@@ -1494,10 +1496,10 @@ class FileAttachmentField extends FileField
         $readonly = clone $this;
         $readonly->setPermissions(
             [
-            'attach' => false,
-            'detach' => false,
-            'upload' => false,
-            'delete' => false
+                'attach' => false,
+                'detach' => false,
+                'upload' => false,
+                'delete' => false
             ]
         );
 
